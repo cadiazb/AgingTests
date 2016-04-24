@@ -4,6 +4,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+import sys
 
 class HellowWorldGTK:
 
@@ -13,13 +14,12 @@ class HellowWorldGTK:
         self.glade.add_from_file(self.gladefile)
         self.glade.connect_signals(self)
         self.glade.get_object("ControlPanel").show_all()
-
-    def on_MainWindow_delete_event(self, widget, event):
-        Gtk.main_quit()
+	self.glade.get_object("ControlPanel").connect("delete-event", Gtk.main_quit)
 
 if __name__ == "__main__":
     try:
-        a = HellowWorldGTK()
-        Gtk.main()
+        win = HellowWorldGTK()
+	Gtk.main()
     except KeyboardInterrupt:
         pass
+
