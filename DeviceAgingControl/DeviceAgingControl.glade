@@ -51,7 +51,7 @@ Control Panel</property>
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="messageLineRead">
+              <object class="GtkLabel" id="messageLine">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">Message line</property>
@@ -178,7 +178,7 @@ Control Panel</property>
                     <property name="can_focus">False</property>
                     <property name="homogeneous">True</property>
                     <child>
-                      <object class="GtkLabel" id="peristalticStateRead">
+                      <object class="GtkLabel" id="peristalticStateLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Pumping</property>
@@ -190,7 +190,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="peristalticStepTimeRead">
+                      <object class="GtkLabel" id="peristalticStepTimeLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">0 sec</property>
@@ -227,7 +227,7 @@ Control Panel</property>
             <property name="orientation">vertical</property>
             <property name="homogeneous">True</property>
             <child>
-              <object class="GtkSwitch" id="switch2">
+              <object class="GtkSwitch" id="MasterPower_button">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="halign">center</property>
@@ -283,10 +283,13 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label15">
+                      <object class="GtkLabel" id="BathTemperatureLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="halign">center</property>
                         <property name="label" translatable="yes">25 C</property>
+                        <property name="single_line_mode">True</property>
+                        <property name="lines">1</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -378,7 +381,7 @@ Control Panel</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="wastePeriodEntry">
+                  <object class="GtkEntry" id="wastePumpPeriodEntry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="input_purpose">number</property>
@@ -389,7 +392,7 @@ Control Panel</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="wasteTimeOnEntry">
+                  <object class="GtkEntry" id="wastePumpTimeOnEntry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="input_purpose">number</property>
@@ -405,7 +408,7 @@ Control Panel</property>
                     <property name="can_focus">False</property>
                     <property name="homogeneous">True</property>
                     <child>
-                      <object class="GtkLabel" id="wasteStateRead">
+                      <object class="GtkLabel" id="wastePumpStateLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Pumping</property>
@@ -417,7 +420,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="wasteStepTimeRead">
+                      <object class="GtkLabel" id="wastePumpStepTimeRead">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">0 sec</property>
@@ -492,7 +495,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSwitch" id="switch1">
+                      <object class="GtkSwitch" id="dataLogPower_button">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="halign">center</property>
@@ -514,7 +517,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkFileChooserButton" id="filechooserbutton1">
+                      <object class="GtkFileChooserButton" id="dataLogChooseFolder">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="action">select-folder</property>
@@ -548,7 +551,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkEntry" id="entry1">
+                      <object class="GtkEntry" id="dataLogFileNameEntry">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                       </object>
@@ -558,7 +561,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkCheckButton" id="checkbutton1">
+                      <object class="GtkCheckButton" id="dataLogAutoName_checkbutton">
                         <property name="label" translatable="yes">Automatic</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -661,7 +664,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="thermostatTempRead">
+                      <object class="GtkLabel" id="thermostatTempLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">90 C</property>
@@ -718,7 +721,7 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="thermostatFlowRead">
+                      <object class="GtkLabel" id="thermostatFlowLabel">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">1 L/min</property>
@@ -759,7 +762,7 @@ Control Panel</property>
                         <property name="can_focus">False</property>
                         <property name="homogeneous">True</property>
                         <child>
-                          <object class="GtkCheckButton" id="checkbutton2">
+                          <object class="GtkCheckButton" id="ThermostatManualPower_checkbutton">
                             <property name="label" translatable="yes">Manual</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
@@ -775,8 +778,7 @@ Control Panel</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkSwitch" id="switch3">
-                            <property name="visible">True</property>
+                          <object class="GtkSwitch" id="ThermostatManualPower_button">
                             <property name="can_focus">True</property>
                             <property name="valign">start</property>
                           </object>
