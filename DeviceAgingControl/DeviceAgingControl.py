@@ -3,7 +3,7 @@
 
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GObject
+from gi.repository import Gtk, GObject, Gdk
 import sys
 import subprocess, time, serial
 
@@ -36,8 +36,6 @@ class Thermostat:
     def __init__(self, gtkWindow):
 	self.TemperatureSetPoint = 20
 	self.ActualTemperature = 25
-	self.FlowRateSetPoint = 1
-	self.ActualFlowRate = 1
 	self.Power = False
 	self.ManualPower = gtkWindow.wg.ThermostatManualPower_checkbutton.get_active()
 	
@@ -56,10 +54,24 @@ class Thermostat:
     def SetTemperature(self, newSetPoint):
 	self.SerialPort.write('SS ' + str(newSetPoint) + '\r')
 	time.sleep(0.1)
-	print 'Set temperature function'
+	print self.SerialPort.readline()
 	self.ThermostatUpdate()
 	
+    def PowerON(self):
+	if (self.Power):
+	    self.SerialPort.write('SO 1\r')
+	else:
+	    self.SerialPort.write('SO 0\r')
+	    
+	self.SerialPort.readline()
+	
     def ThermostatUpdate(self):
+	#Get Unit On status
+	self.SerialPort.write('RO\r')
+	time.sleep(0.1)
+	tmpRes = self.SerialPort.read(2)
+	self.Power = bool(tmpRes == '1\r')
+	
 	#Get actual temperature
 	self.SerialPort.write('RT\r')
 	time.sleep(0.1)
@@ -69,6 +81,7 @@ class Thermostat:
 	self.SerialPort.write('RS\r')
 	time.sleep(0.1)
 	self.TemperatureSetPoint = self.SerialPort.readline()
+	  
 	return True
 	
 class DataLogger:
@@ -78,6 +91,7 @@ class DataLogger:
 	self.SaveFolder = '/home/pi/Documents'
 	self.AutoFileName = True
 	self.FileName = 'AgingTest_20160425'
+	  
 	
 class widgetIDs(object):
   
@@ -92,10 +106,9 @@ class widgetIDs(object):
 	
 	self.thermostatTempEntry = gtkWindow.glade.get_object("thermostatTempEntry")
 	self.thermostatTempLabel = gtkWindow.glade.get_object("thermostatTempLabel")
-	self.thermostatFlowEntry = gtkWindow.glade.get_object("thermostatFlowEntry")
-	self.thermostatFlowLabel = gtkWindow.glade.get_object("thermostatFlowLabel")
 	self.ThermostatManualPower_checkbutton = gtkWindow.glade.get_object("ThermostatManualPower_checkbutton")
 	self.ThermostatManualPower_button = gtkWindow.glade.get_object("ThermostatManualPower_button")
+	self.thermostatPowerStatus_label = gtkWindow.glade.get_object("thermostatPowerStatus_label")
 	
 	self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
 	self.wastePumpTimeOnEntry = gtkWindow.glade.get_object("wastePumpTimeOnEntry")
@@ -145,15 +158,17 @@ class AgingSystemControl:
 	#Create Thermostat object
 	self.thermo = Thermostat(self)
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
-	self.wg.thermostatFlowEntry.props.text = str(self.thermo.FlowRateSetPoint)
 	self.wg.ThermostatManualPower_checkbutton.connect("toggled", self.ThermostatManualPower_callback)
 	self.wg.thermostatTempEntry.connect("activate", self.ThermostatTempEntry_callback, self.wg.thermostatTempEntry)
+	self.wg.ThermostatManualPower_button.connect("notify::active", self.ThermostatManualPower_button_callback)
 	
 	#Create data logger object
 	self.dLogger = DataLogger()
 	#print(dir(self.wg.dataLogChooseFolder.props))
 	self.dLogger.AutoFileName = self.wg.dataLogAutoName_checkbutton.get_active()
 	self.wg.dataLogChooseFolder.set_filename(self.dLogger.SaveFolder)
+	#Create timer to log every minute
+	GObject.timeout_add_seconds(60, self.LogData)
 	
 	  #connections
 	self.wg.dataLogAutoName_checkbutton.connect("toggled", self.AutoFileNameCheckButton_callback)
@@ -161,7 +176,7 @@ class AgingSystemControl:
 	self.wg.dataLogChooseFolder.connect("selection-changed", self.DataLogChooseFolder_callback)
 	
 	#Create timer to update system
-	GObject.timeout_add_seconds(0.1, self.WindowUpdate)
+	GObject.timeout_add_seconds(0.5, self.WindowUpdate)
 	
     #Define general use methods
     def is_number(self, s):
@@ -174,19 +189,27 @@ class AgingSystemControl:
     #Define callbacks for thermostat module
     def ThermostatManualPower_callback(self, button):
 	self.thermo.ManualPower = button.get_active()
+	self.wg.ThermostatManualPower_button.set_active(self.thermo.Power)
 	self.wg.ThermostatManualPower_button.props.visible = button.get_active()
+
+    def ThermostatManualPower_button_callback(self, switch, gparam):
+	self.thermo.Power = switch.get_active()
+	self.thermo.PowerON()
+	self.WindowUpdate()
 	
     def ThermostatTempEntry_callback(self, widget, entry):
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
 	    if (float(tmpText) >= 20 and float(tmpText) <= 150):
 		self.thermo.SetTemperature(float(tmpText))
+		
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
+	self.WindowUpdate()
 	    
     #Define callbacks for data logging module
     def DataLogPower_button_callback(self, switch, gparam):
 	if (switch.get_active()):
-	  self.dLogger.FileName = 'AgingTest_' + time.strftime("%Y%m%d_%H%M%S")
+	  self.dLogger.FileName = 'AgingTest_' + time.strftime("%Y%m%d_%H%M%S") + '.txt'
 	  print self.dLogger.FileName
 	self.dLogger.StartLogging = switch.get_active()
 	
@@ -200,16 +223,40 @@ class AgingSystemControl:
 	  
     #Function to periodically update window
     def WindowUpdate(self):
+	#Bath status
 	self.agingBath.GetTemperature()
 	self.wg.BathTemperatureLabel.props.label = self.agingBath.CurrentTemperature[0:4] + ' C'
-	#self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
+	
+	#Thermostat
 	self.wg.thermostatTempLabel.props.label = str(self.thermo.ActualTemperature)
-	self.wg.thermostatFlowLabel.props.label = str(self.thermo.ActualFlowRate) + ' L/min'
 	self.wg.ThermostatManualPower_button.props.visible = self.thermo.ManualPower
+	self.wg.ThermostatManualPower_button.props.state = self.thermo.Power
+	if (self.thermo.Power):
+	    self.wg.thermostatPowerStatus_label.props.label = 'ON'
+	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.0, 1.0, 0.0, 1.0))
+	else:
+	    self.wg.thermostatPowerStatus_label.props.label = 'OFF'
+	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
+	
+	#Peristaltic pump
 	self.wg.peristalticStateLabel.props.label = self.pPump.Status
+	
+	#Waste pump
 	self.wg.wastePumpStateLabel.props.label = self.wPump.Status
+	
+	#Data logging
 	self.wg.dataLogPower_button.set_active(self.dLogger.StartLogging)
 	self.wg.dataLogFileNameEntry.props.visible = not self.dLogger.AutoFileName
+	return True
+    
+    #Function to log data
+    def LogData(self):
+	if (self.dLogger.StartLogging):
+	  tmpFileName = self.dLogger.SaveFolder + '/' + self.dLogger.FileName
+	  tmpLogFile = open(tmpFileName, 'a+')
+	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\n')
+	  tmpLogFile.close()
+	  
 	return True
 
 if __name__ == "__main__":
