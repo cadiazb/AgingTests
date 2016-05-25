@@ -38,9 +38,11 @@ class Thermostat:
 	self.ActualTemperature = 25
 	self.Power = False
 	self.ManualPower = gtkWindow.wg.ThermostatManualPower_checkbutton.get_active()
+	self.StatusCode = 0
+	self.StatusMessage = 'System OK'
 	
 	#Create timer to update system
-	GObject.timeout_add_seconds(5, self.ThermostatUpdate)
+	GObject.timeout_add_seconds(10, self.ThermostatUpdate)
 	
 	#Create serial port communication
 	self.SerialPort = serial.Serial(port='/dev/ttyUSB0', baudrate = 19200, timeout = 2)
@@ -68,27 +70,46 @@ class Thermostat:
     def ThermostatUpdate(self):
 	#Get Unit On status
 	self.SerialPort.write('RO\r')
-	time.sleep(0.1)
+	time.sleep(0.04)
 	tmpRes = self.SerialPort.read(2)
 	self.Power = bool(tmpRes == '1\r')
 	
 	#Get actual temperature
 	self.SerialPort.write('RT\r')
-	time.sleep(0.1)
+	time.sleep(0.04)
 	self.ActualTemperature = self.SerialPort.readline()
 	
 	#Get set point from thermostat
 	self.SerialPort.write('RS\r')
-	time.sleep(0.1)
+	time.sleep(0.04)
 	self.TemperatureSetPoint = self.SerialPort.readline()
-	  
+
+	#Get fault status
+	self.SerialPort.write('RUFS\r')
+	time.sleep(0.04)
+	self.StatusCode = self.SerialPort.readline()
+	self.FaultStatusMessageUpdate()
 	return True
+      
+    def FaultStatusMessageUpdate(self):
+	tmpCodes = [int(i) for i in self.StatusCode.split()]
+	tmpBinaryV3 = list(bin(tmpCodes[2]))
+	tmpBinaryV3 = [0] * (8-len(tmpBinaryV3)+2) + map(int,tmpBinaryV3[2:])
+	if (tmpBinaryV3[7]):
+	    self.StatusMessage = 'Low Level Warning'
+	   
+	if (tmpBinaryV3[4]):
+	    self.StatusMessage = 'Low Level Fault'
+	    
+	if (not(tmpBinaryV3[7]) and not(tmpBinaryV3[4])):
+	    self.StatusMessage = 'OK'
+	
 	
 class DataLogger:
   
     def __init__(self):
 	self.StartLogging = False
-	self.SaveFolder = '/home/pi/Documents'
+	self.SaveFolder = '/home/pi/Github/AgingTests/Data'
 	self.AutoFileName = True
 	self.FileName = 'AgingTest_20160425'
 	  
@@ -109,6 +130,7 @@ class widgetIDs(object):
 	self.ThermostatManualPower_checkbutton = gtkWindow.glade.get_object("ThermostatManualPower_checkbutton")
 	self.ThermostatManualPower_button = gtkWindow.glade.get_object("ThermostatManualPower_button")
 	self.thermostatPowerStatus_label = gtkWindow.glade.get_object("thermostatPowerStatus_label")
+	self.thermostatFaultStatus_label = gtkWindow.glade.get_object("thermostatFaultStatus_label")
 	
 	self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
 	self.wastePumpTimeOnEntry = gtkWindow.glade.get_object("wastePumpTimeOnEntry")
@@ -237,6 +259,8 @@ class AgingSystemControl:
 	else:
 	    self.wg.thermostatPowerStatus_label.props.label = 'OFF'
 	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
+	self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage    
+	
 	
 	#Peristaltic pump
 	self.wg.peristalticStateLabel.props.label = self.pPump.Status
