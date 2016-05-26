@@ -96,13 +96,13 @@ class Thermostat:
 	tmpBinaryV3 = list(bin(tmpCodes[2]))
 	tmpBinaryV3 = [0] * (8-len(tmpBinaryV3)+2) + map(int,tmpBinaryV3[2:])
 	if (tmpBinaryV3[7]):
-	    self.StatusMessage = 'Low Level Warning'
+	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - Low Level Warning'
 	   
 	if (tmpBinaryV3[4]):
-	    self.StatusMessage = 'Low Level Fault'
+	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - Low Level Fault'
 	    
 	if (not(tmpBinaryV3[7]) and not(tmpBinaryV3[4])):
-	    self.StatusMessage = 'OK'
+	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - OK'
 	
 	
 class DataLogger:
