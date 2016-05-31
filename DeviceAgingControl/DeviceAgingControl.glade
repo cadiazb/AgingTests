@@ -695,14 +695,11 @@ Control Panel</property>
                         <property name="can_focus">False</property>
                         <property name="homogeneous">True</property>
                         <child>
-                          <object class="GtkCheckButton" id="ThermostatManualPower_checkbutton">
-                            <property name="label" translatable="yes">Manual</property>
+                          <object class="GtkEntry" id="ThermostatRefillPumpEntry">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="receives_default">False</property>
-                            <property name="valign">start</property>
-                            <property name="xalign">0</property>
-                            <property name="draw_indicator">True</property>
+                            <property name="caps_lock_warning">False</property>
+                            <property name="input_purpose">number</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -711,9 +708,11 @@ Control Panel</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkSwitch" id="ThermostatManualPower_button">
+                          <object class="GtkButton" id="ThermostatRefillPumpButton">
+                            <property name="label" translatable="yes">Refill	</property>
+                            <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="valign">start</property>
+                            <property name="receives_default">True</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -740,11 +739,49 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="thermostatPowerStatus_label">
+                      <object class="GtkBox" id="box2">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="valign">start</property>
-                        <property name="label" translatable="yes">Power</property>
+                        <child>
+                          <object class="GtkLabel" id="thermostatPowerStatus_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="valign">start</property>
+                            <property name="label" translatable="yes">Power</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkCheckButton" id="ThermostatManualPower_checkbutton">
+                            <property name="label" translatable="yes">Manual</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">False</property>
+                            <property name="valign">start</property>
+                            <property name="xalign">0</property>
+                            <property name="draw_indicator">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="ThermostatManualPower_button">
+                            <property name="can_focus">True</property>
+                            <property name="valign">start</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
                       </object>
                       <packing>
                         <property name="left_attach">1</property>
@@ -752,7 +789,16 @@ Control Panel</property>
                       </packing>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkLabel" id="label15">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="valign">start</property>
+                        <property name="label" translatable="yes">Refill pump [sec]</property>
+                      </object>
+                      <packing>
+                        <property name="left_attach">0</property>
+                        <property name="top_attach">1</property>
+                      </packing>
                     </child>
                   </object>
                   <packing>
