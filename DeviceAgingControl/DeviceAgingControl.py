@@ -4,6 +4,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk
+from gpiozero import LED
 import sys
 import subprocess, time, serial
 
@@ -39,7 +40,14 @@ class Thermostat:
 	self.Power = False
 	self.ManualPower = gtkWindow.wg.ThermostatManualPower_checkbutton.get_active()
 	self.StatusCode = 0
+	self.WaterIsLow = False
 	self.StatusMessage = 'System OK'
+	self.RefillPump = LED(20)
+	self.RefillPumpTimeON = 20
+	self.RefillPumpPumping = False
+	
+	#Make sure refill pump is OFF on startup
+	self.RefillPumpOFF()
 	
 	#Create timer to update system
 	GObject.timeout_add_seconds(10, self.ThermostatUpdate)
@@ -66,6 +74,15 @@ class Thermostat:
 	    self.SerialPort.write('SO 0\r')
 	    
 	self.SerialPort.readline()
+	
+    def RefillPumpON(self):
+	#Pin signal is inverted in external circuit
+	self.RefillPump.off()
+	self.RefillPumpPumping = True
+	
+    def RefillPumpOFF(self):
+	self.RefillPump.on()
+	self.RefillPumpPumping = False
 	
     def ThermostatUpdate(self):
 	#Get Unit On status
@@ -97,12 +114,15 @@ class Thermostat:
 	tmpBinaryV3 = [0] * (8-len(tmpBinaryV3)+2) + map(int,tmpBinaryV3[2:])
 	if (tmpBinaryV3[7]):
 	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - Low Level Warning'
+	    self.WaterIsLow = True
 	   
 	if (tmpBinaryV3[4]):
 	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - Low Level Fault'
+	    self.WaterIsLow = True
 	    
 	if (not(tmpBinaryV3[7]) and not(tmpBinaryV3[4])):
 	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - OK'
+	    self.WaterIsLow = False
 	
 	
 class DataLogger:
@@ -130,6 +150,8 @@ class widgetIDs(object):
 	self.ThermostatManualPower_checkbutton = gtkWindow.glade.get_object("ThermostatManualPower_checkbutton")
 	self.ThermostatManualPower_button = gtkWindow.glade.get_object("ThermostatManualPower_button")
 	self.thermostatPowerStatus_label = gtkWindow.glade.get_object("thermostatPowerStatus_label")
+	self.ThermostatRefillPumpEntry = gtkWindow.glade.get_object("ThermostatRefillPumpEntry")
+	self.ThermostatRefillPumpButton = gtkWindow.glade.get_object("ThermostatRefillPumpButton")
 	self.thermostatFaultStatus_label = gtkWindow.glade.get_object("thermostatFaultStatus_label")
 	
 	self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
@@ -180,9 +202,12 @@ class AgingSystemControl:
 	#Create Thermostat object
 	self.thermo = Thermostat(self)
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
+	self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
 	self.wg.ThermostatManualPower_checkbutton.connect("toggled", self.ThermostatManualPower_callback)
 	self.wg.thermostatTempEntry.connect("activate", self.ThermostatTempEntry_callback, self.wg.thermostatTempEntry)
 	self.wg.ThermostatManualPower_button.connect("notify::active", self.ThermostatManualPower_button_callback)
+	self.wg.ThermostatRefillPumpButton.connect("clicked", self.ThermostatRefillPumpButton_callback)
+	self.wg.ThermostatRefillPumpEntry.connect("activate", self.ThermostatRefillPumpEntry_callback, self.wg.ThermostatRefillPumpEntry)
 	
 	#Create data logger object
 	self.dLogger = DataLogger()
@@ -199,6 +224,9 @@ class AgingSystemControl:
 	
 	#Create timer to update system
 	GObject.timeout_add_seconds(0.5, self.WindowUpdate)
+	
+	#Create timer to check for low lever warning
+	GObject.timeout_add_seconds(300, self.CheckLowLevelWarning)
 	
     #Define general use methods
     def is_number(self, s):
@@ -227,6 +255,30 @@ class AgingSystemControl:
 		
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
 	self.WindowUpdate()
+	
+    def ThermostatRefillPumpEntry_callback(self, widget, entry):
+	tmpText = entry.get_text()
+	if self.is_number(tmpText):
+	    if (float(tmpText) >= 1 and float(tmpText) <= 60):
+		self.thermo.RefillPumpTimeON(float(tmpText))
+		
+	self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
+	self.WindowUpdate()
+	
+    def ThermostatRefillPumpButton_callback(self, button):
+      self.thermo.RefillPumpON()
+      time.sleep(self.thermo.RefillPumpTimeON)
+      self.thermo.RefillPumpOFF()
+    
+    def ThermostatRefillTank(self):
+      self.thermo.RefillPumpON()
+      time.sleep(self.thermo.RefillPumpTimeON)
+      self.thermo.RefillPumpOFF()
+      
+    def CheckLowLevelWarning(self):
+	if (self.thermo.WaterIsLow):
+	    self.ThermostatRefillTank()
+	return True
 	    
     #Define callbacks for data logging module
     def DataLogPower_button_callback(self, switch, gparam):
@@ -259,7 +311,7 @@ class AgingSystemControl:
 	else:
 	    self.wg.thermostatPowerStatus_label.props.label = 'OFF'
 	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
-	self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage    
+	self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage
 	
 	
 	#Peristaltic pump
