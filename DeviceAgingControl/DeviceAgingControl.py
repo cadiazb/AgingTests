@@ -7,14 +7,65 @@ from gi.repository import Gtk, GObject, Gdk
 from gpiozero import LED
 import sys
 import subprocess, time, serial
+from binascii import unhexlify
 
 class PeristalticPump:
   
     def __init__(self):
-	self.FlowRate = 0
-	self.Period = 1
-	self.TimeON = 0.5
+	self.FlowRate = 25
+	self.Period = 3.05
+	self.TimeON = 3
 	self.Status = 'Idle'
+	self.WriteCommand = ''
+	self.ReadCommand = '\xE9\x01\x02\x52\x4A\xF2'
+	self.PumpSerialAddress = '01';
+	self.PumpON = '00'
+	self.PurgeTimeON = 0
+	
+	#Create serial port communication
+	self.SerialPort = serial.Serial(
+	      port='/dev/ttyUSB1',
+	      baudrate = 1200,
+	      parity = serial.PARITY_EVEN,
+	      stopbits = serial.STOPBITS_ONE,
+	      bytesize = serial.EIGHTBITS,
+	      timeout = 2)
+	self.SerialPort.isOpen()
+	
+    def SetFlowRate(self, NewFlowRate):
+	if (NewFlowRate >= 0 and NewFlowRate <= 100):
+	  self.FlowRate = NewFlowRate
+	  
+    def PowerON(self):
+	self.PumpON = '01'
+	self.BuildSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Pumping'
+	
+    def PowerOFF(self):
+	self.PumpON = '00'
+	self.BuildSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Idle'
+	
+    def Purge(self):
+	self.PumpON = '03'
+	self.BuildSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Purging'
+	
+    def BuildSerialCommand(self):
+      flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
+      fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
+	  
+      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
+		
+      if (self.WriteCommand[12:14] == 'E8'):
+	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
+	  
+      if (self.WriteCommand[12:14] == 'E9'):
+	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
+    
 	
 class WastePump:
   
@@ -43,7 +94,7 @@ class Thermostat:
 	self.WaterIsLow = False
 	self.StatusMessage = 'System OK'
 	self.RefillPump = LED(20)
-	self.RefillPumpTimeON = 20
+	self.RefillPumpTimeON = 5
 	self.RefillPumpPumping = False
 	
 	#Make sure refill pump is OFF on startup
@@ -84,6 +135,11 @@ class Thermostat:
 	self.RefillPump.on()
 	self.RefillPumpPumping = False
 	
+    def ThermostatClearFault(self):
+	self.SerialPort.write('SUFS\r')
+	time.sleep(0.1)
+	tmpRes = self.SerialPort.readline()
+	
     def ThermostatUpdate(self):
 	#Get Unit On status
 	self.SerialPort.write('RO\r')
@@ -112,6 +168,8 @@ class Thermostat:
 	tmpCodes = [int(i) for i in self.StatusCode.split()]
 	tmpBinaryV3 = list(bin(tmpCodes[2]))
 	tmpBinaryV3 = [0] * (8-len(tmpBinaryV3)+2) + map(int,tmpBinaryV3[2:])
+	if (self.WaterIsLow):
+	    print("Water is low")
 	if (tmpBinaryV3[7]):
 	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - Low Level Warning'
 	    self.WaterIsLow = True
@@ -122,7 +180,9 @@ class Thermostat:
 	    
 	if (not(tmpBinaryV3[7]) and not(tmpBinaryV3[4])):
 	    self.StatusMessage = 'Code ' + ''.join(str(e) for e in tmpBinaryV3) + ' - OK'
-	    self.WaterIsLow = False
+	    if (self.WaterIsLow):
+		print("Thermostat cleared fault")
+	   # self.WaterIsLow = False
 	
 	
 class DataLogger:
@@ -144,6 +204,8 @@ class widgetIDs(object):
 	self.peristalticFlowEntry = gtkWindow.glade.get_object("peristalticFlowEntry")
 	self.peristalticStateLabel = gtkWindow.glade.get_object("peristalticStateLabel")
 	self.peristalticStepTimeLabel = gtkWindow.glade.get_object("peristalticStepTimeLabel")
+	self.peristalticPower_button = gtkWindow.glade.get_object("peristalticPower_button")
+	self.peristalticPurge_button = gtkWindow.glade.get_object("peristalticPurge_button")
 	
 	self.thermostatTempEntry = gtkWindow.glade.get_object("thermostatTempEntry")
 	self.thermostatTempLabel = gtkWindow.glade.get_object("thermostatTempLabel")
@@ -190,6 +252,9 @@ class AgingSystemControl:
 	self.wg.peristalticPeriodEntry.props.text = str(self.pPump.Period)
 	self.wg.peristalticTimeOnEntry.props.text = str(self.pPump.TimeON)
 	self.wg.peristalticFlowEntry.props.text = str(self.pPump.FlowRate)
+	self.wg.peristalticPower_button.connect("notify::active", self.peristalticPower_button_callback)
+	self.wg.peristalticFlowEntry.connect("activate", self.peristalticFlowEntry_callback, self.wg.peristalticFlowEntry)
+	self.wg.peristalticPurge_button.connect("toggled", self.peristalticPurge_button_callback)
 	
 	#Create waste pump object
 	self.wPump = PeristalticPump()
@@ -215,7 +280,7 @@ class AgingSystemControl:
 	self.dLogger.AutoFileName = self.wg.dataLogAutoName_checkbutton.get_active()
 	self.wg.dataLogChooseFolder.set_filename(self.dLogger.SaveFolder)
 	#Create timer to log every minute
-	GObject.timeout_add_seconds(60, self.LogData)
+	GObject.timeout_add_seconds(15, self.LogData)
 	
 	  #connections
 	self.wg.dataLogAutoName_checkbutton.connect("toggled", self.AutoFileNameCheckButton_callback)
@@ -223,10 +288,19 @@ class AgingSystemControl:
 	self.wg.dataLogChooseFolder.connect("selection-changed", self.DataLogChooseFolder_callback)
 	
 	#Create timer to update system
-	GObject.timeout_add_seconds(0.5, self.WindowUpdate)
+	GObject.timeout_add_seconds(1, self.WindowUpdate)
 	
-	#Create timer to check for low lever warning
-	GObject.timeout_add_seconds(300, self.CheckLowLevelWarning)
+	#Create timer to check for low level warning
+	GObject.timeout_add_seconds(60, self.CheckLowLevelWarning)
+	
+	#Create timer to turn peristaltic ON/OFF when thermostat is ON and at temp whenruning just PBS
+	#GObject.timeout_add_seconds(300, self.PeristalticAutoPower)
+	
+	#Create timer to turn peristaltic pump ON when running aging AgingTest with H2O2
+	GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	
+	#Create timer to refill aging bath if necessary
+	#GObject.timeout_add_seconds(300, self.PeristalticAutoPurge)
 	
     #Define general use methods
     def is_number(self, s):
@@ -236,6 +310,69 @@ class AgingSystemControl:
 	except ValueError:
 	    return False
 
+    #Define callbacks for peristaltic pump
+    def peristalticPower_button_callback(self, switch, gparam):
+	if switch.get_active():
+	    self.pPump.PowerON()
+	    GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
+	    
+	else:
+	    self.pPump.PowerOFF()
+	    GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	    
+	self.WindowUpdate()
+	
+    def peristalticFlowEntry_callback(self, widget, entry):
+	tmpText = entry.get_text()
+	if self.is_number(tmpText):
+	    if (float(tmpText) >= 0 and float(tmpText) <= 25):
+		self.pPump.FlowRate = int(tmpText)
+		#if (self.pPump.PumpON == '01'):
+		    #self.pPump.PowerON()
+		    
+	print self.pPump.FlowRate
+	self.WindowUpdate()
+	
+    def peristalticPurge_button_callback(self, button):
+	if button.get_active():
+	    self.pPump.Purge()
+	else:
+	    self.pPump.PowerOFF()
+	    
+	self.WindowUpdate()
+	
+    def PeristalticAutoPower(self):
+	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
+	    self.pPump.PowerON()
+	else:
+	    self.pPump.PowerOFF()
+	    
+	return True
+    
+    def PeristalticAutoON(self):
+	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
+	    self.wg.peristalticPower_button.set_active(True)
+	else:
+	    self.pPump.PowerOFF()
+	    GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	
+	self.WindowUpdate()
+	    
+    def PeristalticAutoOFF(self):
+	self.wg.peristalticPower_button.set_active(False)
+	
+	self.WindowUpdate()
+      
+    #def PeristalticAutoPurge(self):
+	#if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 90 and float(self.agingBath.CurrentTemperature[0:4]) < 84):
+	    #self.pPump.PurgeTimeOn = 
+	    #self.pPump.Purge()
+	    #time.sleep(
+	#else:
+	    #self.pPump.PowerOFF()
+	    
+	#return True
+    
     #Define callbacks for thermostat module
     def ThermostatManualPower_callback(self, button):
 	self.thermo.ManualPower = button.get_active()
@@ -260,7 +397,7 @@ class AgingSystemControl:
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
 	    if (float(tmpText) >= 1 and float(tmpText) <= 60):
-		self.thermo.RefillPumpTimeON(float(tmpText))
+		self.thermo.RefillPumpTimeON = int(tmpText)
 		
 	self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
 	self.WindowUpdate()
@@ -269,15 +406,23 @@ class AgingSystemControl:
       self.thermo.RefillPumpON()
       time.sleep(self.thermo.RefillPumpTimeON)
       self.thermo.RefillPumpOFF()
+      self.thermo.ThermostatClearFault()
+      print("Refill button callback cleared fault")
+      self.thermo.WaterIsLow = False
     
     def ThermostatRefillTank(self):
       self.thermo.RefillPumpON()
       time.sleep(self.thermo.RefillPumpTimeON)
       self.thermo.RefillPumpOFF()
+      self.thermo.ThermostatClearFault()
+      print("Auto refill cleared fault")
+      self.thermo.WaterIsLow = False
       
     def CheckLowLevelWarning(self):
-	if (self.thermo.WaterIsLow):
+	print("Visited check low level warning")
+	if (self.thermo.WaterIsLow and self.thermo.Power):
 	    self.ThermostatRefillTank()
+	    print("Refilled tank")
 	return True
 	    
     #Define callbacks for data logging module
@@ -297,40 +442,45 @@ class AgingSystemControl:
 	  
     #Function to periodically update window
     def WindowUpdate(self):
-	#Bath status
-	self.agingBath.GetTemperature()
-	self.wg.BathTemperatureLabel.props.label = self.agingBath.CurrentTemperature[0:4] + ' C'
+	try:
+	    #Bath status
+	    self.agingBath.GetTemperature()
+	    self.wg.BathTemperatureLabel.props.label = self.agingBath.CurrentTemperature[0:4] + ' C'
 	
-	#Thermostat
-	self.wg.thermostatTempLabel.props.label = str(self.thermo.ActualTemperature)
-	self.wg.ThermostatManualPower_button.props.visible = self.thermo.ManualPower
-	self.wg.ThermostatManualPower_button.props.state = self.thermo.Power
-	if (self.thermo.Power):
-	    self.wg.thermostatPowerStatus_label.props.label = 'ON'
-	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.0, 1.0, 0.0, 1.0))
-	else:
-	    self.wg.thermostatPowerStatus_label.props.label = 'OFF'
-	    self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
-	self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage
+	    #Thermostat
+	    self.wg.thermostatTempLabel.props.label = str(self.thermo.ActualTemperature)
+	    self.wg.ThermostatManualPower_button.props.visible = self.thermo.ManualPower
+	    self.wg.ThermostatManualPower_button.props.state = self.thermo.Power
+	    if (self.thermo.Power):
+		self.wg.thermostatPowerStatus_label.props.label = 'ON'
+		self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.0, 1.0, 0.0, 1.0))
+	    else:
+		self.wg.thermostatPowerStatus_label.props.label = 'OFF'
+		self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
+	    self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage
 	
 	
-	#Peristaltic pump
-	self.wg.peristalticStateLabel.props.label = self.pPump.Status
+	    #Peristaltic pump
+	    self.wg.peristalticStateLabel.props.label = self.pPump.Status
+	    #self.wg.peristalticPower_button.state = ((self.pPump.PumpON == '01' or self.pPump.PumpON == '03'))
 	
-	#Waste pump
-	self.wg.wastePumpStateLabel.props.label = self.wPump.Status
 	
-	#Data logging
-	self.wg.dataLogPower_button.set_active(self.dLogger.StartLogging)
-	self.wg.dataLogFileNameEntry.props.visible = not self.dLogger.AutoFileName
-	return True
+	    #Waste pump
+	    self.wg.wastePumpStateLabel.props.label = self.wPump.Status
+	
+	    #Data logging
+	    self.wg.dataLogPower_button.set_active(self.dLogger.StartLogging)
+	    self.wg.dataLogFileNameEntry.props.visible = not self.dLogger.AutoFileName
+	    return True
+	except ValueError:
+	    return True
     
     #Function to log data
     def LogData(self):
 	if (self.dLogger.StartLogging):
 	  tmpFileName = self.dLogger.SaveFolder + '/' + self.dLogger.FileName
 	  tmpLogFile = open(tmpFileName, 'a+')
-	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\n')
+	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + self.pPump.Status + '\n')
 	  tmpLogFile.close()
 	  
 	return True
