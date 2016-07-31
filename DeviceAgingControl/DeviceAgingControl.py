@@ -12,9 +12,9 @@ from binascii import unhexlify
 class PeristalticPump:
   
     def __init__(self):
-	self.FlowRate = 25
+	self.FlowRate = 10
 	self.Period = 3.05
-	self.TimeON = 3
+	self.TimeON = 2
 	self.Status = 'Idle'
 	self.WriteCommand = ''
 	self.ReadCommand = '\xE9\x01\x02\x52\x4A\xF2'
@@ -254,6 +254,8 @@ class AgingSystemControl:
 	self.wg.peristalticFlowEntry.props.text = str(self.pPump.FlowRate)
 	self.wg.peristalticPower_button.connect("notify::active", self.peristalticPower_button_callback)
 	self.wg.peristalticFlowEntry.connect("activate", self.peristalticFlowEntry_callback, self.wg.peristalticFlowEntry)
+	self.wg.peristalticTimeOnEntry.connect("activate", self.peristalticTimeOnEntry_callback, self.wg.peristalticTimeOnEntry)
+	self.wg.peristalticPeriodEntry.connect("activate", self.peristalticPeriodEntry_callback, self.wg.peristalticPeriodEntry)
 	self.wg.peristalticPurge_button.connect("toggled", self.peristalticPurge_button_callback)
 	
 	#Create waste pump object
@@ -331,6 +333,28 @@ class AgingSystemControl:
 		    #self.pPump.PowerON()
 		    
 	print self.pPump.FlowRate
+	self.WindowUpdate()
+	
+    def peristalticTimeOnEntry_callback(self, widget, entry):
+	tmpText = entry.get_text()
+	if self.is_number(tmpText):
+	    if (float(tmpText) >= 0):
+		self.pPump.TimeON = int(tmpText)
+		#if (self.pPump.PumpON == '01'):
+		    #self.pPump.PowerON()
+		    
+	print self.pPump.TimeON
+	self.WindowUpdate()
+	
+    def peristalticPeriodEntry_callback(self, widget, entry):
+	tmpText = entry.get_text()
+	if self.is_number(tmpText):
+	    if (float(tmpText) >= 0):
+		self.pPump.Period = int(tmpText)
+		#if (self.pPump.PumpON == '01'):
+		    #self.pPump.PowerON()
+		    
+	print self.pPump.Period
 	self.WindowUpdate()
 	
     def peristalticPurge_button_callback(self, button):
