@@ -12,8 +12,8 @@ from binascii import unhexlify
 class PeristalticPump:
   
     def __init__(self):
-	self.FlowRate = 10
-	self.Period = 3.05
+	self.FlowRate = 24
+	self.Period = 3
 	self.TimeON = 2
 	self.Status = 'Idle'
 	self.WriteCommand = ''
@@ -316,11 +316,9 @@ class AgingSystemControl:
     def peristalticPower_button_callback(self, switch, gparam):
 	if switch.get_active():
 	    self.pPump.PowerON()
-	    GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
 	    
 	else:
 	    self.pPump.PowerOFF()
-	    GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	    
 	self.WindowUpdate()
 	
@@ -329,8 +327,8 @@ class AgingSystemControl:
 	if self.is_number(tmpText):
 	    if (float(tmpText) >= 0 and float(tmpText) <= 25):
 		self.pPump.FlowRate = int(tmpText)
-		#if (self.pPump.PumpON == '01'):
-		    #self.pPump.PowerON()
+		if (self.pPump.PumpON == '01'):
+		    self.pPump.PowerON()
 		    
 	print self.pPump.FlowRate
 	self.WindowUpdate()
@@ -339,9 +337,7 @@ class AgingSystemControl:
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
 	    if (float(tmpText) >= 0):
-		self.pPump.TimeON = int(tmpText)
-		#if (self.pPump.PumpON == '01'):
-		    #self.pPump.PowerON()
+		self.pPump.TimeON = float(tmpText)
 		    
 	print self.pPump.TimeON
 	self.WindowUpdate()
@@ -350,9 +346,7 @@ class AgingSystemControl:
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
 	    if (float(tmpText) >= 0):
-		self.pPump.Period = int(tmpText)
-		#if (self.pPump.PumpON == '01'):
-		    #self.pPump.PowerON()
+		self.pPump.Period = float(tmpText)
 		    
 	print self.pPump.Period
 	self.WindowUpdate()
@@ -376,8 +370,9 @@ class AgingSystemControl:
     def PeristalticAutoON(self):
 	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
 	    self.wg.peristalticPower_button.set_active(True)
+	    GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
+	    GObject.timeout_add_seconds(60 * self.pPump.Period, self.PeristalticAutoON)
 	else:
-	    self.pPump.PowerOFF()
 	    GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	
 	self.WindowUpdate()
@@ -411,7 +406,7 @@ class AgingSystemControl:
     def ThermostatTempEntry_callback(self, widget, entry):
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
-	    if (float(tmpText) >= 20 and float(tmpText) <= 150):
+	    if (float(tmpText) >= 20 and float(tmpText) <= 100):
 		self.thermo.SetTemperature(float(tmpText))
 		
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
@@ -428,22 +423,21 @@ class AgingSystemControl:
 	
     def ThermostatRefillPumpButton_callback(self, button):
       self.thermo.RefillPumpON()
-      time.sleep(self.thermo.RefillPumpTimeON)
-      self.thermo.RefillPumpOFF()
-      self.thermo.ThermostatClearFault()
+      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
+      time.sleep(1)
+      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
       print("Refill button callback cleared fault")
       self.thermo.WaterIsLow = False
     
     def ThermostatRefillTank(self):
       self.thermo.RefillPumpON()
-      time.sleep(self.thermo.RefillPumpTimeON)
-      self.thermo.RefillPumpOFF()
-      self.thermo.ThermostatClearFault()
+      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
+      time.sleep(1)
+      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
       print("Auto refill cleared fault")
       self.thermo.WaterIsLow = False
       
     def CheckLowLevelWarning(self):
-	print("Visited check low level warning")
 	if (self.thermo.WaterIsLow and self.thermo.Power):
 	    self.ThermostatRefillTank()
 	    print("Refilled tank")
