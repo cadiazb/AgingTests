@@ -284,22 +284,22 @@ class AgingSystemControl:
 	#Create timer to log every minute
 	GObject.timeout_add_seconds(15, self.LogData)
 	
-	  #connections
+	#connections
 	self.wg.dataLogAutoName_checkbutton.connect("toggled", self.AutoFileNameCheckButton_callback)
 	self.wg.dataLogPower_button.connect("notify::active", self.DataLogPower_button_callback)
 	self.wg.dataLogChooseFolder.connect("selection-changed", self.DataLogChooseFolder_callback)
 	
 	#Create timer to update system
-	GObject.timeout_add_seconds(1, self.WindowUpdate)
+	self.Timer_Window_Update = GObject.timeout_add_seconds(1, self.WindowUpdate)
 	
 	#Create timer to check for low level warning
-	GObject.timeout_add_seconds(60, self.CheckLowLevelWarning)
+	self.Timer_CheckLowLevelWarning = GObject.timeout_add_seconds(60, self.CheckLowLevelWarning)
 	
 	#Create timer to turn peristaltic ON/OFF when thermostat is ON and at temp whenruning just PBS
 	#GObject.timeout_add_seconds(300, self.PeristalticAutoPower)
 	
 	#Create timer to turn peristaltic pump ON when running aging AgingTest with H2O2
-	GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	
 	#Create timer to refill aging bath if necessary
 	#GObject.timeout_add_seconds(300, self.PeristalticAutoPurge)
@@ -368,12 +368,13 @@ class AgingSystemControl:
 	return True
     
     def PeristalticAutoON(self):
+	GObject.source_remove(self.Timer_PeristalticAutoON)
 	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
 	    self.wg.peristalticPower_button.set_active(True)
 	    GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
-	    GObject.timeout_add_seconds(60 * self.pPump.Period, self.PeristalticAutoON)
+	    self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * self.pPump.Period, self.PeristalticAutoON)
 	else:
-	    GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	    self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	
 	self.WindowUpdate()
 	    
