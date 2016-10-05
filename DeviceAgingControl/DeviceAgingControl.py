@@ -50,12 +50,13 @@ class PeristalticPump:
 	
     def Purge(self):
 	self.PumpON = '03'
-	self.BuildSerialCommand()
+	self.BuildPurgeSerialCommand()
 	self.SerialPort.write(unhexlify(self.WriteCommand))
 	self.Status = 'Purging'
 	
     def BuildSerialCommand(self):
       flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
+      print flowRateHex
       fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
 	  
       self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
@@ -65,6 +66,12 @@ class PeristalticPump:
 	  
       if (self.WriteCommand[12:14] == 'E9'):
 	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
+	  
+    def BuildPurgeSerialCommand(self):
+      flowRateHex = "{:04x}".format(int(8 * 10))
+      fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
+	  
+      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
     
 	
 class WastePump:
@@ -355,7 +362,11 @@ class AgingSystemControl:
 	if button.get_active():
 	    self.pPump.Purge()
 	else:
-	    self.pPump.PowerOFF()
+	    if self.wg.peristalticPower_button.get_active():
+		self.pPump.PowerON()
+	    
+	    else:
+		self.pPump.PowerOFF()
 	    
 	self.WindowUpdate()
 	
@@ -379,7 +390,7 @@ class AgingSystemControl:
 	self.WindowUpdate()
 	    
     def PeristalticAutoOFF(self):
-	self.wg.peristalticPower_button.set_active(False)
+	#self.wg.peristalticPower_button.set_active(False)
 	
 	self.WindowUpdate()
       
