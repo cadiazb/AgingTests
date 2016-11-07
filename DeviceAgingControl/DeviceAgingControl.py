@@ -418,7 +418,7 @@ class AgingSystemControl:
     def ThermostatTempEntry_callback(self, widget, entry):
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
-	    if (float(tmpText) >= 20 and float(tmpText) <= 100):
+	    if (float(tmpText) >= 20 and float(tmpText) <= 101):
 		self.thermo.SetTemperature(float(tmpText))
 		
 	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
