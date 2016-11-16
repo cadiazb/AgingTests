@@ -306,7 +306,7 @@ class AgingSystemControl:
 	#GObject.timeout_add_seconds(300, self.PeristalticAutoPower)
 	
 	#Create timer to turn peristaltic pump ON when running aging AgingTest with H2O2
-	self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+	#self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	
 	#Create timer to refill aging bath if necessary
 	#GObject.timeout_add_seconds(300, self.PeristalticAutoPurge)
