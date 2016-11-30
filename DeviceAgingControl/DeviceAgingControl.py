@@ -12,7 +12,7 @@ from binascii import unhexlify
 class PeristalticPump:
   
     def __init__(self):
-	self.FlowRate = 4
+	self.FlowRate = 2
 	self.Period = 3
 	self.TimeON = 2
 	self.Status = 'Idle'
@@ -56,10 +56,9 @@ class PeristalticPump:
 	
     def BuildSerialCommand(self):
       flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
-      print flowRateHex
       fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
 	  
-      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
+      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:02x}'.format(fcr)
 		
       if (self.WriteCommand[12:14] == 'E8'):
 	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
@@ -88,7 +87,11 @@ class BathStatus:
 	self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
 	
     def GetTemperature(self):
-	self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
+	try:
+	    self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
+	    return True
+	except ValueError:
+	    return True
 	
 class Thermostat:
   
@@ -332,7 +335,7 @@ class AgingSystemControl:
     def peristalticFlowEntry_callback(self, widget, entry):
 	tmpText = entry.get_text()
 	if self.is_number(tmpText):
-	    if (float(tmpText) >= 0 and float(tmpText) <= 25):
+	    if (float(tmpText) >= 0 and float(tmpText) <= 100):
 		self.pPump.FlowRate = int(tmpText)
 		if (self.pPump.PumpON == '01'):
 		    self.pPump.PowerON()
