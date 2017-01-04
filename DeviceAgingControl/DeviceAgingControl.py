@@ -11,6 +11,7 @@ from binascii import unhexlify
 
 #class PeristalticPump:
   
+<<<<<<< HEAD
     #def __init__(self):
 	#self.FlowRate = 24
 	#self.Period = 3
@@ -60,6 +61,56 @@ from binascii import unhexlify
       #fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
 	  
       #self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
+=======
+    def __init__(self):
+	self.FlowRate = 2
+	self.Period = 3
+	self.TimeON = 2
+	self.Status = 'Idle'
+	self.WriteCommand = ''
+	self.ReadCommand = '\xE9\x01\x02\x52\x4A\xF2'
+	self.PumpSerialAddress = '01';
+	self.PumpON = '00'
+	self.PurgeTimeON = 0
+	
+	#Create serial port communication
+	self.SerialPort = serial.Serial(
+	      port='/dev/ttyUSB0',
+	      baudrate = 1200,
+	      parity = serial.PARITY_EVEN,
+	      stopbits = serial.STOPBITS_ONE,
+	      bytesize = serial.EIGHTBITS,
+	      timeout = 2)
+	self.SerialPort.isOpen()
+	
+    def SetFlowRate(self, NewFlowRate):
+	if (NewFlowRate >= 0 and NewFlowRate <= 100):
+	  self.FlowRate = NewFlowRate
+	  
+    def PowerON(self):
+	self.PumpON = '01'
+	self.BuildSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Pumping'
+	
+    def PowerOFF(self):
+	self.PumpON = '00'
+	self.BuildSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Idle'
+	
+    def Purge(self):
+	self.PumpON = '03'
+	self.BuildPurgeSerialCommand()
+	self.SerialPort.write(unhexlify(self.WriteCommand))
+	self.Status = 'Purging'
+	
+    def BuildSerialCommand(self):
+      flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
+      fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
+	  
+      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:02x}'.format(fcr)
+>>>>>>> 0337f927f51f841230c75955b1eb9b70d77e389b
 		
       #if (self.WriteCommand[12:14] == 'E8'):
 	  #self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
@@ -88,7 +139,11 @@ class BathStatus:
 	self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
 	
     def GetTemperature(self):
-	self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
+	try:
+	    self.CurrentTemperature = subprocess.check_output("sudo GetTemperature", shell=True)
+	    return True
+	except ValueError:
+	    return True
 	
 class Thermostat:
   
@@ -214,14 +269,14 @@ class widgetIDs(object):
 	#self.peristalticPower_button = gtkWindow.glade.get_object("peristalticPower_button")
 	#self.peristalticPurge_button = gtkWindow.glade.get_object("peristalticPurge_button")
 	
-	self.thermostatTempEntry = gtkWindow.glade.get_object("thermostatTempEntry")
-	self.thermostatTempLabel = gtkWindow.glade.get_object("thermostatTempLabel")
-	self.ThermostatManualPower_checkbutton = gtkWindow.glade.get_object("ThermostatManualPower_checkbutton")
-	self.ThermostatManualPower_button = gtkWindow.glade.get_object("ThermostatManualPower_button")
-	self.thermostatPowerStatus_label = gtkWindow.glade.get_object("thermostatPowerStatus_label")
-	self.ThermostatRefillPumpEntry = gtkWindow.glade.get_object("ThermostatRefillPumpEntry")
-	self.ThermostatRefillPumpButton = gtkWindow.glade.get_object("ThermostatRefillPumpButton")
-	self.thermostatFaultStatus_label = gtkWindow.glade.get_object("thermostatFaultStatus_label")
+	#self.thermostatTempEntry = gtkWindow.glade.get_object("thermostatTempEntry")
+	#self.thermostatTempLabel = gtkWindow.glade.get_object("thermostatTempLabel")
+	#self.ThermostatManualPower_checkbutton = gtkWindow.glade.get_object("ThermostatManualPower_checkbutton")
+	#self.ThermostatManualPower_button = gtkWindow.glade.get_object("ThermostatManualPower_button")
+	#self.thermostatPowerStatus_label = gtkWindow.glade.get_object("thermostatPowerStatus_label")
+	#self.ThermostatRefillPumpEntry = gtkWindow.glade.get_object("ThermostatRefillPumpEntry")
+	#self.ThermostatRefillPumpButton = gtkWindow.glade.get_object("ThermostatRefillPumpButton")
+	#self.thermostatFaultStatus_label = gtkWindow.glade.get_object("thermostatFaultStatus_label")
 	
 	#self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
 	#self.wastePumpTimeOnEntry = gtkWindow.glade.get_object("wastePumpTimeOnEntry")
@@ -274,14 +329,14 @@ class AgingSystemControl:
 	self.agingBath = BathStatus()
 	
 	#Create Thermostat object
-	self.thermo = Thermostat(self)
-	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
-	self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
-	self.wg.ThermostatManualPower_checkbutton.connect("toggled", self.ThermostatManualPower_callback)
-	self.wg.thermostatTempEntry.connect("activate", self.ThermostatTempEntry_callback, self.wg.thermostatTempEntry)
-	self.wg.ThermostatManualPower_button.connect("notify::active", self.ThermostatManualPower_button_callback)
-	self.wg.ThermostatRefillPumpButton.connect("clicked", self.ThermostatRefillPumpButton_callback)
-	self.wg.ThermostatRefillPumpEntry.connect("activate", self.ThermostatRefillPumpEntry_callback, self.wg.ThermostatRefillPumpEntry)
+	#self.thermo = Thermostat(self)
+	#self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
+	#self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
+	#self.wg.ThermostatManualPower_checkbutton.connect("toggled", self.ThermostatManualPower_callback)
+	#self.wg.thermostatTempEntry.connect("activate", self.ThermostatTempEntry_callback, self.wg.thermostatTempEntry)
+	#self.wg.ThermostatManualPower_button.connect("notify::active", self.ThermostatManualPower_button_callback)
+	#self.wg.ThermostatRefillPumpButton.connect("clicked", self.ThermostatRefillPumpButton_callback)
+	#self.wg.ThermostatRefillPumpEntry.connect("activate", self.ThermostatRefillPumpEntry_callback, self.wg.ThermostatRefillPumpEntry)
 	
 	#Create data logger object
 	self.dLogger = DataLogger()
@@ -300,7 +355,7 @@ class AgingSystemControl:
 	self.Timer_Window_Update = GObject.timeout_add_seconds(1, self.WindowUpdate)
 	
 	#Create timer to check for low level warning
-	self.Timer_CheckLowLevelWarning = GObject.timeout_add_seconds(60, self.CheckLowLevelWarning)
+	#self.Timer_CheckLowLevelWarning = GObject.timeout_add_seconds(60, self.CheckLowLevelWarning)
 	
 	#Create timer to turn peristaltic ON/OFF when thermostat is ON and at temp whenruning just PBS
 	#GObject.timeout_add_seconds(300, self.PeristalticAutoPower)
@@ -327,6 +382,7 @@ class AgingSystemControl:
 	#else:
 	    #self.pPump.PowerOFF()
 	    
+<<<<<<< HEAD
 	#self.WindowUpdate()
 	
     #def peristalticFlowEntry_callback(self, widget, entry):
@@ -336,6 +392,17 @@ class AgingSystemControl:
 		#self.pPump.FlowRate = int(tmpText)
 		#if (self.pPump.PumpON == '01'):
 		    #self.pPump.PowerON()
+=======
+	self.WindowUpdate()
+	
+    def peristalticFlowEntry_callback(self, widget, entry):
+	tmpText = entry.get_text()
+	if self.is_number(tmpText):
+	    if (float(tmpText) >= 0 and float(tmpText) <= 100):
+		self.pPump.FlowRate = int(tmpText)
+		if (self.pPump.PumpON == '01'):
+		    self.pPump.PowerON()
+>>>>>>> 0337f927f51f841230c75955b1eb9b70d77e389b
 		    
 	#print self.pPump.FlowRate
 	#self.WindowUpdate()
@@ -405,55 +472,55 @@ class AgingSystemControl:
 	#return True
     
     #Define callbacks for thermostat module
-    def ThermostatManualPower_callback(self, button):
-	self.thermo.ManualPower = button.get_active()
-	self.wg.ThermostatManualPower_button.set_active(self.thermo.Power)
-	self.wg.ThermostatManualPower_button.props.visible = button.get_active()
+    #def ThermostatManualPower_callback(self, button):
+	#self.thermo.ManualPower = button.get_active()
+	#self.wg.ThermostatManualPower_button.set_active(self.thermo.Power)
+	#self.wg.ThermostatManualPower_button.props.visible = button.get_active()
 
-    def ThermostatManualPower_button_callback(self, switch, gparam):
-	self.thermo.Power = switch.get_active()
-	self.thermo.PowerON()
-	self.WindowUpdate()
+    #def ThermostatManualPower_button_callback(self, switch, gparam):
+	#self.thermo.Power = switch.get_active()
+	#self.thermo.PowerON()
+	#self.WindowUpdate()
 	
-    def ThermostatTempEntry_callback(self, widget, entry):
-	tmpText = entry.get_text()
-	if self.is_number(tmpText):
-	    if (float(tmpText) >= 20 and float(tmpText) <= 101):
-		self.thermo.SetTemperature(float(tmpText))
+    #def ThermostatTempEntry_callback(self, widget, entry):
+	#tmpText = entry.get_text()
+	#if self.is_number(tmpText):
+	    #if (float(tmpText) >= 20 and float(tmpText) <= 101):
+		#self.thermo.SetTemperature(float(tmpText))
 		
-	self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
-	self.WindowUpdate()
+	#self.wg.thermostatTempEntry.props.text = str(self.thermo.TemperatureSetPoint)
+	#self.WindowUpdate()
 	
-    def ThermostatRefillPumpEntry_callback(self, widget, entry):
-	tmpText = entry.get_text()
-	if self.is_number(tmpText):
-	    if (float(tmpText) >= 1 and float(tmpText) <= 60):
-		self.thermo.RefillPumpTimeON = int(tmpText)
+    #def ThermostatRefillPumpEntry_callback(self, widget, entry):
+	#tmpText = entry.get_text()
+	#if self.is_number(tmpText):
+	    #if (float(tmpText) >= 1 and float(tmpText) <= 60):
+		#self.thermo.RefillPumpTimeON = int(tmpText)
 		
-	self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
-	self.WindowUpdate()
+	#self.wg.ThermostatRefillPumpEntry.props.text = str(self.thermo.RefillPumpTimeON)
+	#self.WindowUpdate()
 	
-    def ThermostatRefillPumpButton_callback(self, button):
-      self.thermo.RefillPumpON()
-      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
-      time.sleep(1)
-      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
-      print("Refill button callback cleared fault")
-      self.thermo.WaterIsLow = False
+    #def ThermostatRefillPumpButton_callback(self, button):
+      #self.thermo.RefillPumpON()
+      #GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
+      #time.sleep(1)
+      #GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
+      #print("Refill button callback cleared fault")
+      #self.thermo.WaterIsLow = False
     
-    def ThermostatRefillTank(self):
-      self.thermo.RefillPumpON()
-      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
-      time.sleep(1)
-      GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
-      print("Auto refill cleared fault")
-      self.thermo.WaterIsLow = False
+    #def ThermostatRefillTank(self):
+      #self.thermo.RefillPumpON()
+      #GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.RefillPumpOFF)
+      #time.sleep(1)
+      #GObject.timeout_add_seconds(self.thermo.RefillPumpTimeON, self.thermo.ThermostatClearFault)
+      #print("Auto refill cleared fault")
+      #self.thermo.WaterIsLow = False
       
-    def CheckLowLevelWarning(self):
-	if (self.thermo.WaterIsLow and self.thermo.Power):
-	    self.ThermostatRefillTank()
-	    print("Refilled tank")
-	return True
+    #def CheckLowLevelWarning(self):
+	#if (self.thermo.WaterIsLow and self.thermo.Power):
+	    #self.ThermostatRefillTank()
+	    #print("Refilled tank")
+	#return True
 	    
     #Define callbacks for data logging module
     def DataLogPower_button_callback(self, switch, gparam):
@@ -478,16 +545,16 @@ class AgingSystemControl:
 	    self.wg.BathTemperatureLabel.props.label = self.agingBath.CurrentTemperature[0:4] + ' C'
 	
 	    #Thermostat
-	    self.wg.thermostatTempLabel.props.label = str(self.thermo.ActualTemperature)
-	    self.wg.ThermostatManualPower_button.props.visible = self.thermo.ManualPower
-	    self.wg.ThermostatManualPower_button.props.state = self.thermo.Power
-	    if (self.thermo.Power):
-		self.wg.thermostatPowerStatus_label.props.label = 'ON'
-		self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.0, 1.0, 0.0, 1.0))
-	    else:
-		self.wg.thermostatPowerStatus_label.props.label = 'OFF'
-		self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
-	    self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage
+	    #self.wg.thermostatTempLabel.props.label = str(self.thermo.ActualTemperature)
+	    #self.wg.ThermostatManualPower_button.props.visible = self.thermo.ManualPower
+	    #self.wg.ThermostatManualPower_button.props.state = self.thermo.Power
+	    #if (self.thermo.Power):
+		#self.wg.thermostatPowerStatus_label.props.label = 'ON'
+		#self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(0.0, 1.0, 0.0, 1.0))
+	    #else:
+		#self.wg.thermostatPowerStatus_label.props.label = 'OFF'
+		#self.wg.thermostatPowerStatus_label.override_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(1.0, 0.0, 0.0, 1.0))
+	    #self.wg.thermostatFaultStatus_label.props.label = self.thermo.StatusMessage
 	
 	
 	    #Peristaltic pump
@@ -510,7 +577,12 @@ class AgingSystemControl:
 	if (self.dLogger.StartLogging):
 	  tmpFileName = self.dLogger.SaveFolder + '/' + self.dLogger.FileName
 	  tmpLogFile = open(tmpFileName, 'a+')
+<<<<<<< HEAD
 	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + 'No pPump' + '\n')
+=======
+	  #tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + self.pPump.Status + '\n')
+	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(00.00) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + self.pPump.Status + '\n')
+>>>>>>> 0337f927f51f841230c75955b1eb9b70d77e389b
 	  tmpLogFile.close()
 	  
 	return True
