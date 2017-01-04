@@ -9,69 +9,69 @@ import sys
 import subprocess, time, serial
 from binascii import unhexlify
 
-class PeristalticPump:
+#class PeristalticPump:
   
-    def __init__(self):
-	self.FlowRate = 24
-	self.Period = 3
-	self.TimeON = 2
-	self.Status = 'Idle'
-	self.WriteCommand = ''
-	self.ReadCommand = '\xE9\x01\x02\x52\x4A\xF2'
-	self.PumpSerialAddress = '01';
-	self.PumpON = '00'
-	self.PurgeTimeON = 0
+    #def __init__(self):
+	#self.FlowRate = 24
+	#self.Period = 3
+	#self.TimeON = 2
+	#self.Status = 'Idle'
+	#self.WriteCommand = ''
+	#self.ReadCommand = '\xE9\x01\x02\x52\x4A\xF2'
+	#self.PumpSerialAddress = '01';
+	#self.PumpON = '00'
+	#self.PurgeTimeON = 0
 	
 	#Create serial port communication
-	self.SerialPort = serial.Serial(
-	      port='/dev/ttyUSB1',
-	      baudrate = 1200,
-	      parity = serial.PARITY_EVEN,
-	      stopbits = serial.STOPBITS_ONE,
-	      bytesize = serial.EIGHTBITS,
-	      timeout = 2)
-	self.SerialPort.isOpen()
+	#self.SerialPort = serial.Serial(
+	      #port='/dev/ttyUSB1',
+	      #baudrate = 1200,
+	      #parity = serial.PARITY_EVEN,
+	      #stopbits = serial.STOPBITS_ONE,
+	      #bytesize = serial.EIGHTBITS,
+	      #timeout = 2)
+	#self.SerialPort.isOpen()
 	
-    def SetFlowRate(self, NewFlowRate):
-	if (NewFlowRate >= 0 and NewFlowRate <= 100):
-	  self.FlowRate = NewFlowRate
+    #def SetFlowRate(self, NewFlowRate):
+	#if (NewFlowRate >= 0 and NewFlowRate <= 100):
+	  #self.FlowRate = NewFlowRate
 	  
-    def PowerON(self):
-	self.PumpON = '01'
-	self.BuildSerialCommand()
-	self.SerialPort.write(unhexlify(self.WriteCommand))
-	self.Status = 'Pumping'
+    #def PowerON(self):
+	#self.PumpON = '01'
+	#self.BuildSerialCommand()
+	#self.SerialPort.write(unhexlify(self.WriteCommand))
+	#self.Status = 'Pumping'
 	
-    def PowerOFF(self):
-	self.PumpON = '00'
-	self.BuildSerialCommand()
-	self.SerialPort.write(unhexlify(self.WriteCommand))
-	self.Status = 'Idle'
+    #def PowerOFF(self):
+	#self.PumpON = '00'
+	#self.BuildSerialCommand()
+	#self.SerialPort.write(unhexlify(self.WriteCommand))
+	#self.Status = 'Idle'
 	
-    def Purge(self):
-	self.PumpON = '03'
-	self.BuildPurgeSerialCommand()
-	self.SerialPort.write(unhexlify(self.WriteCommand))
-	self.Status = 'Purging'
+    #def Purge(self):
+	#self.PumpON = '03'
+	#self.BuildPurgeSerialCommand()
+	#self.SerialPort.write(unhexlify(self.WriteCommand))
+	#self.Status = 'Purging'
 	
-    def BuildSerialCommand(self):
-      flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
-      print flowRateHex
-      fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
+    #def BuildSerialCommand(self):
+      #flowRateHex = "{:04x}".format(int(self.FlowRate * 10))
+      #print flowRateHex
+      #fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
 	  
-      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
+      #self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
 		
-      if (self.WriteCommand[12:14] == 'E8'):
-	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
+      #if (self.WriteCommand[12:14] == 'E8'):
+	  #self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
 	  
-      if (self.WriteCommand[12:14] == 'E9'):
-	  self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
+      #if (self.WriteCommand[12:14] == 'E9'):
+	  #self.WriteCommand = self.WriteCommand[0:13] + '00' + self.WriteCommand[13:]
 	  
-    def BuildPurgeSerialCommand(self):
-      flowRateHex = "{:04x}".format(int(8 * 10))
-      fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
+    #def BuildPurgeSerialCommand(self):
+      #flowRateHex = "{:04x}".format(int(8 * 10))
+      #fcr = int(self.PumpSerialAddress,16) ^ int("06", 16) ^ int("57", 16) ^ int("4A", 16) ^ int(flowRateHex[0:1],16) ^ int(flowRateHex[2:],16) ^ int("00", 16) ^ int(self.PumpON, 16) ^ int("00", 16)
 	  
-      self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
+      #self.WriteCommand = 'E9' + self.PumpSerialAddress + '06' + '57' + '4A' + flowRateHex[0:2] + flowRateHex[2:] + self.PumpON + '00' + '{:x}'.format(fcr)
     
 	
 class WastePump:
@@ -206,13 +206,13 @@ class widgetIDs(object):
     def __init__(self, gtkWindow):
 	self.ControlPanel = gtkWindow.glade.get_object("ControlPanel")
 	
-	self.peristalticPeriodEntry = gtkWindow.glade.get_object("peristalticPeriodEntry")
-	self.peristalticTimeOnEntry = gtkWindow.glade.get_object("peristalticTimeOnEntry")
-	self.peristalticFlowEntry = gtkWindow.glade.get_object("peristalticFlowEntry")
-	self.peristalticStateLabel = gtkWindow.glade.get_object("peristalticStateLabel")
-	self.peristalticStepTimeLabel = gtkWindow.glade.get_object("peristalticStepTimeLabel")
-	self.peristalticPower_button = gtkWindow.glade.get_object("peristalticPower_button")
-	self.peristalticPurge_button = gtkWindow.glade.get_object("peristalticPurge_button")
+	#self.peristalticPeriodEntry = gtkWindow.glade.get_object("peristalticPeriodEntry")
+	#self.peristalticTimeOnEntry = gtkWindow.glade.get_object("peristalticTimeOnEntry")
+	#self.peristalticFlowEntry = gtkWindow.glade.get_object("peristalticFlowEntry")
+	#self.peristalticStateLabel = gtkWindow.glade.get_object("peristalticStateLabel")
+	#self.peristalticStepTimeLabel = gtkWindow.glade.get_object("peristalticStepTimeLabel")
+	#self.peristalticPower_button = gtkWindow.glade.get_object("peristalticPower_button")
+	#self.peristalticPurge_button = gtkWindow.glade.get_object("peristalticPurge_button")
 	
 	self.thermostatTempEntry = gtkWindow.glade.get_object("thermostatTempEntry")
 	self.thermostatTempLabel = gtkWindow.glade.get_object("thermostatTempLabel")
@@ -223,10 +223,10 @@ class widgetIDs(object):
 	self.ThermostatRefillPumpButton = gtkWindow.glade.get_object("ThermostatRefillPumpButton")
 	self.thermostatFaultStatus_label = gtkWindow.glade.get_object("thermostatFaultStatus_label")
 	
-	self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
-	self.wastePumpTimeOnEntry = gtkWindow.glade.get_object("wastePumpTimeOnEntry")
-	self.wastePumpStateLabel = gtkWindow.glade.get_object("wastePumpStateLabel")
-	self.wastePumpStepTimeRead = gtkWindow.glade.get_object("wastePumpStepTimeRead")
+	#self.wastePumpPeriodEntry = gtkWindow.glade.get_object("wastePumpPeriodEntry")
+	#self.wastePumpTimeOnEntry = gtkWindow.glade.get_object("wastePumpTimeOnEntry")
+	#self.wastePumpStateLabel = gtkWindow.glade.get_object("wastePumpStateLabel")
+	#self.wastePumpStepTimeRead = gtkWindow.glade.get_object("wastePumpStepTimeRead")
 	
 	self.dataLogPower_button = gtkWindow.glade.get_object("dataLogPower_button")
 	self.dataLogChooseFolder = gtkWindow.glade.get_object("dataLogChooseFolder")
@@ -255,20 +255,20 @@ class AgingSystemControl:
 	
 	
 	#Create Peristaltic pump object
-	self.pPump = PeristalticPump()
-	self.wg.peristalticPeriodEntry.props.text = str(self.pPump.Period)
-	self.wg.peristalticTimeOnEntry.props.text = str(self.pPump.TimeON)
-	self.wg.peristalticFlowEntry.props.text = str(self.pPump.FlowRate)
-	self.wg.peristalticPower_button.connect("notify::active", self.peristalticPower_button_callback)
-	self.wg.peristalticFlowEntry.connect("activate", self.peristalticFlowEntry_callback, self.wg.peristalticFlowEntry)
-	self.wg.peristalticTimeOnEntry.connect("activate", self.peristalticTimeOnEntry_callback, self.wg.peristalticTimeOnEntry)
-	self.wg.peristalticPeriodEntry.connect("activate", self.peristalticPeriodEntry_callback, self.wg.peristalticPeriodEntry)
-	self.wg.peristalticPurge_button.connect("toggled", self.peristalticPurge_button_callback)
+	#self.pPump = PeristalticPump()
+	#self.wg.peristalticPeriodEntry.props.text = str(self.pPump.Period)
+	#self.wg.peristalticTimeOnEntry.props.text = str(self.pPump.TimeON)
+	#self.wg.peristalticFlowEntry.props.text = str(self.pPump.FlowRate)
+	#self.wg.peristalticPower_button.connect("notify::active", self.peristalticPower_button_callback)
+	#self.wg.peristalticFlowEntry.connect("activate", self.peristalticFlowEntry_callback, self.wg.peristalticFlowEntry)
+	#self.wg.peristalticTimeOnEntry.connect("activate", self.peristalticTimeOnEntry_callback, self.wg.peristalticTimeOnEntry)
+	#self.wg.peristalticPeriodEntry.connect("activate", self.peristalticPeriodEntry_callback, self.wg.peristalticPeriodEntry)
+	#self.wg.peristalticPurge_button.connect("toggled", self.peristalticPurge_button_callback)
 	
 	#Create waste pump object
-	self.wPump = PeristalticPump()
-	self.wg.wastePumpPeriodEntry.props.text = str(self.wPump.Period)
-	self.wg.wastePumpTimeOnEntry.props.text = str(self.wPump.TimeON)
+	#self.wPump = PeristalticPump()
+	#self.wg.wastePumpPeriodEntry.props.text = str(self.wPump.Period)
+	#self.wg.wastePumpTimeOnEntry.props.text = str(self.wPump.TimeON)
 	
 	#Create bath status object
 	self.agingBath = BathStatus()
@@ -320,79 +320,79 @@ class AgingSystemControl:
 	    return False
 
     #Define callbacks for peristaltic pump
-    def peristalticPower_button_callback(self, switch, gparam):
-	if switch.get_active():
-	    self.pPump.PowerON()
+    #def peristalticPower_button_callback(self, switch, gparam):
+	#if switch.get_active():
+	    #self.pPump.PowerON()
 	    
-	else:
-	    self.pPump.PowerOFF()
+	#else:
+	    #self.pPump.PowerOFF()
 	    
-	self.WindowUpdate()
+	#self.WindowUpdate()
 	
-    def peristalticFlowEntry_callback(self, widget, entry):
-	tmpText = entry.get_text()
-	if self.is_number(tmpText):
-	    if (float(tmpText) >= 0 and float(tmpText) <= 25):
-		self.pPump.FlowRate = int(tmpText)
-		if (self.pPump.PumpON == '01'):
-		    self.pPump.PowerON()
+    #def peristalticFlowEntry_callback(self, widget, entry):
+	#tmpText = entry.get_text()
+	#if self.is_number(tmpText):
+	    #if (float(tmpText) >= 0 and float(tmpText) <= 25):
+		#self.pPump.FlowRate = int(tmpText)
+		#if (self.pPump.PumpON == '01'):
+		    #self.pPump.PowerON()
 		    
-	print self.pPump.FlowRate
-	self.WindowUpdate()
+	#print self.pPump.FlowRate
+	#self.WindowUpdate()
 	
-    def peristalticTimeOnEntry_callback(self, widget, entry):
-	tmpText = entry.get_text()
-	if self.is_number(tmpText):
-	    if (float(tmpText) >= 0):
-		self.pPump.TimeON = float(tmpText)
+    #def peristalticTimeOnEntry_callback(self, widget, entry):
+	#tmpText = entry.get_text()
+	#if self.is_number(tmpText):
+	    #if (float(tmpText) >= 0):
+		#self.pPump.TimeON = float(tmpText)
 		    
-	print self.pPump.TimeON
-	self.WindowUpdate()
+	#print self.pPump.TimeON
+	#self.WindowUpdate()
 	
-    def peristalticPeriodEntry_callback(self, widget, entry):
-	tmpText = entry.get_text()
-	if self.is_number(tmpText):
-	    if (float(tmpText) >= 0):
-		self.pPump.Period = float(tmpText)
+    #def peristalticPeriodEntry_callback(self, widget, entry):
+	#tmpText = entry.get_text()
+	#if self.is_number(tmpText):
+	    #if (float(tmpText) >= 0):
+		#self.pPump.Period = float(tmpText)
 		    
-	print self.pPump.Period
-	self.WindowUpdate()
+	#print self.pPump.Period
+	#self.WindowUpdate()
 	
-    def peristalticPurge_button_callback(self, button):
-	if button.get_active():
-	    self.pPump.Purge()
-	else:
-	    if self.wg.peristalticPower_button.get_active():
-		self.pPump.PowerON()
+    #def peristalticPurge_button_callback(self, button):
+	#if button.get_active():
+	    #self.pPump.Purge()
+	#else:
+	    #if self.wg.peristalticPower_button.get_active():
+		#self.pPump.PowerON()
 	    
-	    else:
-		self.pPump.PowerOFF()
+	    #else:
+		#self.pPump.PowerOFF()
 	    
-	self.WindowUpdate()
+	#self.WindowUpdate()
 	
-    def PeristalticAutoPower(self):
-	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
-	    self.pPump.PowerON()
-	else:
-	    self.pPump.PowerOFF()
+    #def PeristalticAutoPower(self):
+	#if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
+	    #self.pPump.PowerON()
+	#else:
+	    #self.pPump.PowerOFF()
 	    
-	return True
+	#return True
     
-    def PeristalticAutoON(self):
-	GObject.source_remove(self.Timer_PeristalticAutoON)
-	if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
-	    self.wg.peristalticPower_button.set_active(True)
-	    GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
-	    self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * self.pPump.Period, self.PeristalticAutoON)
-	else:
-	    self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
+    #def PeristalticAutoON(self):
+	#GObject.source_remove(self.Timer_PeristalticAutoON)
+	#if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 80):
+	    #self.wg.peristalticPower_button.set_active(True)
+	    #GObject.timeout_add_seconds(60 * self.pPump.TimeON, self.PeristalticAutoOFF)
+	    #self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * self.pPump.Period, self.PeristalticAutoON)
+	#else:
+	    #self.Timer_PeristalticAutoON = GObject.timeout_add_seconds(60 * (self.pPump.Period - self.pPump.TimeON), self.PeristalticAutoON)
 	
-	self.WindowUpdate()
+	#self.WindowUpdate()
 	    
-    def PeristalticAutoOFF(self):
+    #def PeristalticAutoOFF(self):
 	#self.wg.peristalticPower_button.set_active(False)
 	
-	self.WindowUpdate()
+	#self.WindowUpdate()
       
     #def PeristalticAutoPurge(self):
 	#if (self.thermo.Power and float(self.thermo.ActualTemperature[0:4]) > 90 and float(self.agingBath.CurrentTemperature[0:4]) < 84):
@@ -491,12 +491,12 @@ class AgingSystemControl:
 	
 	
 	    #Peristaltic pump
-	    self.wg.peristalticStateLabel.props.label = self.pPump.Status
+	    #self.wg.peristalticStateLabel.props.label = self.pPump.Status
 	    #self.wg.peristalticPower_button.state = ((self.pPump.PumpON == '01' or self.pPump.PumpON == '03'))
 	
 	
 	    #Waste pump
-	    self.wg.wastePumpStateLabel.props.label = self.wPump.Status
+	    #self.wg.wastePumpStateLabel.props.label = self.wPump.Status
 	
 	    #Data logging
 	    self.wg.dataLogPower_button.set_active(self.dLogger.StartLogging)
@@ -510,7 +510,7 @@ class AgingSystemControl:
 	if (self.dLogger.StartLogging):
 	  tmpFileName = self.dLogger.SaveFolder + '/' + self.dLogger.FileName
 	  tmpLogFile = open(tmpFileName, 'a+')
-	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + self.pPump.Status + '\n')
+	  tmpLogFile.write(time.strftime("%Y%m%d_%H%M%S") + ' \t' + str(self.thermo.ActualTemperature[0:4]) + '\t' + str(self.agingBath.CurrentTemperature[0:4]) + '\t' + 'No pPump' + '\n')
 	  tmpLogFile.close()
 	  
 	return True
